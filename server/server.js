@@ -15,20 +15,17 @@ app.use(cors());
 app.use(express.json());
 app.use('/screenshots', express.static('screenshots'));
 
-// Ensure screenshots directory exists
 const screenshotsDir = path.join(__dirname, 'screenshots');
 if (!fs.existsSync(screenshotsDir)){
     fs.mkdirSync(screenshotsDir);
 }
 
-// Helper function for delay
 function delay(time) {
   return new Promise(function(resolve) { 
     setTimeout(resolve, time)
   });
 }
 
-// GPT-4 chat endpoint
 app.post('/api/chat', async (req, res) => {
   const { message } = req.body;
 
@@ -53,27 +50,45 @@ app.post('/api/chat', async (req, res) => {
 
     const address = response.data.choices[0].message.content;
 
-    // Use Puppeteer to capture Google Maps screenshot
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: "new"
     });
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
-    await page.goto('https://www.google.com/maps');
-    await page.waitForSelector('#searchboxinput', { visible: true });
-    await page.type('#searchboxinput', address);
-    await page.keyboard.press('Enter');
+//
+const page = await browser.newPage();
+await page.setViewport({ width: 1280, height: 800 });
 
-    // Wait for navigation and then additional time for map to load
-    await page.waitForNavigation({ waitUntil: 'networkidle0' });
-    await delay(3000);  // Wait for 3 seconds
+// Update the zoom level to 20z for a closer view
+const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}/@0,0,20z/data=!3m1!1e3`;
+await page.goto(mapUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+
+
+    //
+    // const page = await browser.newPage();
+    // await page.setViewport({ width: 1280, height: 800 });
+
+    // const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}/@0,0,15z/data=!3m1!1e3`;
+    // await page.goto(mapUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+
+    // Wait for any element that suggests the map has loaded
+    await page.waitForSelector('button[aria-label="Satellite"], #widget-zoom-in, .widget-scene-canvas', 
+      { visible: true, timeout: 60000 });
+
+    // Ensure we're in satellite view
+    await page.evaluate(() => {
+      const satelliteButton = document.querySelector('button[aria-label="Satellite"]');
+      if (satelliteButton && !satelliteButton.ariaPressed) {
+        satelliteButton.click();
+      }
+    });
+
+    await delay(5000);
 
     const screenshotPath = path.join(screenshotsDir, `${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath });
+    await page.screenshot({ path: screenshotPath, fullPage: true });
     await browser.close();
 
     const screenshotUrl = `/screenshots/${path.basename(screenshotPath)}`;
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
     res.json({ 
       reply: address,
@@ -81,7 +96,7 @@ app.post('/api/chat', async (req, res) => {
       mapUrl: mapUrl
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error details:', error);
     res.status(500).json({ error: 'An error occurred while processing your request.' });
   }
 });
