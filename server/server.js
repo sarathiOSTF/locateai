@@ -92,7 +92,7 @@ app.post('/api/chat', async (req, res) => {
   
       console.log('Attempting to zoom in...');
       const zoomInButton = await page.$('button[aria-label="Zoom in"]');
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 0; i++) {
         if (zoomInButton) {
           await zoomInButton.click();
           await delay(1000);
@@ -102,17 +102,17 @@ app.post('/api/chat', async (req, res) => {
       console.log('Waiting for the zoomed view to stabilize...');
       await delay(3000);
 
-      console.log('Attempting to collapse side panel...');
-await page.evaluate(() => {
-    const collapseButton = document.querySelector('button.yra0jd.Hk4XGb[aria-label="Collapse side panel"]');
-//   const collapseButton = document.querySelector('button[aria-label="Collapse side panel"]');
-  if (collapseButton) {
-    collapseButton.click();
-    console.log('Side panel collapse button clicked');
-  } else {
-    console.log('Side panel collapse button not found');
-  }
-});
+//       console.log('Attempting to collapse side panel...');
+// await page.evaluate(() => {
+//     const collapseButton = document.querySelector('button.yra0jd.Hk4XGb[aria-label="Collapse side panel"]');
+// //   const collapseButton = document.querySelector('button[aria-label="Collapse side panel"]');
+//   if (collapseButton) {
+//     collapseButton.click();
+//     console.log('Side panel collapse button clicked');
+//   } else {
+//     console.log('Side panel collapse button not found');
+//   }
+// });
 
 // Wait for the panel to collapse
 await delay(2000);
